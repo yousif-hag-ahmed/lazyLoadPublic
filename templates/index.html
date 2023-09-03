@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lazy Loading Example</title>
+</head>
+<body>
+    <h1>Main Content</h1>
+
+    <!-- Lazy load text -->
+    <div id="lazyText">
+        <p>Loading text...</p>
+    </div>
+
+    <!-- Lazy load images -->
+    <div id="imageContainer"></div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Lazy load text
+            fetch('/generate-text')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("lazyText").innerHTML = data.text;
+                })
+                .catch(error => {
+                    console.error("Error fetching lazy text:", error);
+                });
+
+            // Lazy load images
+            function fetchImages() {
+                fetch('/get-images')
+                    .then(response => response.json())
+                    .then(images => {
+                        const imageContainer = document.getElementById("imageContainer");
+                        images.forEach(imgPath => {
+                            if (!document.querySelector(`[data-src="${imgPath}"]`)) {
+                                const imgElement = document.createElement("img");
+                                imgElement.className = "lazy";
+                                imgElement.dataset.src = imgPath;
+                                imageContainer.appendChild(imgElement);
+                            }
+                        });
+                    })
+                    .catch(error => {
+                        console.error("Error fetching images:", error);
+                    });
+            }
+
+            fetchImages();
+            setInterval(fetchImages, 5000);  // Check for new images every 5 seconds
+
+            const lazyImages = Array.from(document.querySelectorAll(".lazy"));
+            if ("IntersectionObserver" in window) {
+                let lazyImageObserver = new IntersectionObserver(function(entries, observer) {
+                    entries.forEach(function(entry) {
+                        if (entry.isIntersecting) {
+                            let lazyImage = entry.target;
+                            lazyImage.src = lazyImage.dataset.src;
+                            lazyImage.classList.remove("lazy");
+                            lazyImageObserver.unobserve(lazyImage);
+                        }
+                    });
+                });
+                
+                document.addEventListener("DOMNodeInserted", function(e) {
+                    if (e.target.className === "lazy") {
+                        lazyImageObserver.observe(e.target);
+                    }
+                }, false);
+            }
+        });
+    </script>
+</body>
+</html>
